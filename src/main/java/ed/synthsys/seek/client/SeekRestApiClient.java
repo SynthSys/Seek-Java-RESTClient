@@ -5,11 +5,9 @@
  */
 package ed.synthsys.seek.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ws.rs.client.Client;
@@ -17,8 +15,6 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -55,7 +51,6 @@ public class SeekRestApiClient implements AutoCloseable {
         DATAFILES_REST_URI = baseSeekURI + "data_files";
         MODEL_FILES_REST_URI = baseSeekURI + "models";
         
-        JSON_MAPPER = new ObjectMapper();
         CLIENT = initClient(userName,password);
     } 
     
@@ -71,12 +66,7 @@ public class SeekRestApiClient implements AutoCloseable {
     String MODEL_FILES_REST_URI;
   
     Client CLIENT;
-    final ObjectMapper JSON_MAPPER;
     
-    final RetryPolicy RETRY_POLICY = new RetryPolicy()
-      .retryIf((Response response) -> response.getStatus() != 200)
-      .withMaxRetries(3).withBackoff(1, 8, TimeUnit.SECONDS)
-      .withMaxDuration(60, TimeUnit.SECONDS);    
     
     @Override
     public void close() {
@@ -126,13 +116,10 @@ public class SeekRestApiClient implements AutoCloseable {
     }
     
     public Response createPerson(Person person) {
-        return Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> System.out.println(String.format("Connection attempt failed %s", failure)))     
-            .get(() -> CLIENT
+        return CLIENT
                 .target(PEOPLE_REST_URI)
                 .request(MediaType.APPLICATION_JSON)
-                .method("PATCH", Entity.entity(person, MediaType.APPLICATION_JSON)));
+                .method("PATCH", Entity.entity(person, MediaType.APPLICATION_JSON));
     }
 
     public Person getPerson(int id) {
@@ -161,13 +148,10 @@ public class SeekRestApiClient implements AutoCloseable {
     }
 
     public Response createProject(Project project) {
-        return Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> System.out.println(String.format("Connection attempt failed %s", failure)))     
-            .get(() -> CLIENT
+        return CLIENT
             .target(PROJECTS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .post(Entity.entity(project, MediaType.APPLICATION_JSON)));
+            .post(Entity.entity(project, MediaType.APPLICATION_JSON));
     }
 
     public Project getProject(int id) {
@@ -190,20 +174,11 @@ public class SeekRestApiClient implements AutoCloseable {
     
     
     public Response createInvestigation(Investigation investigation) {
-        //AtomicInteger num = new AtomicInteger(1);
-
-        Response response = Failsafe.with(RETRY_POLICY)
-            .onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            .get(() -> CLIENT
+        return CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .post(Entity.entity(investigation, MediaType.APPLICATION_JSON)));
+            .post(Entity.entity(investigation, MediaType.APPLICATION_JSON));
         
-        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        //return resultPair;
-        return response;
     }
 
     public Investigation getInvestigation(int id) {
@@ -233,19 +208,10 @@ public class SeekRestApiClient implements AutoCloseable {
     }
 
     public Response createStudy(Study study) {
-        //AtomicInteger num = new AtomicInteger(1);
-        
-        Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            .get(() -> CLIENT
+        return CLIENT
             .target(STUDIES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .post(Entity.entity(study, MediaType.APPLICATION_JSON)));
-        
-        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        //return resultPair;
-        return response;
+            .post(Entity.entity(study, MediaType.APPLICATION_JSON));
     }
 
     public Study getStudy(int id) {
@@ -275,19 +241,11 @@ public class SeekRestApiClient implements AutoCloseable {
     }
 
     public Response createAssay(Assay assay) {
-        //AtomicInteger num = new AtomicInteger(1);
-        
-        Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            .get(() -> CLIENT
+        return CLIENT
             .target(ASSAYS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .post(Entity.entity(assay, MediaType.APPLICATION_JSON)));
+            .post(Entity.entity(assay, MediaType.APPLICATION_JSON));
     
-        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        //return resultPair;
-        return response;
     }
 
     public Assay getAssay(int id) {
@@ -317,19 +275,11 @@ public class SeekRestApiClient implements AutoCloseable {
     }
 
     public Response createDataFile(DataFile dataFile) {
-        //AtomicInteger num = new AtomicInteger(1);
-        
-        Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            .get(() -> CLIENT
+        return CLIENT
             .target(DATAFILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .post(Entity.entity(dataFile, MediaType.APPLICATION_JSON)));
+            .post(Entity.entity(dataFile, MediaType.APPLICATION_JSON));
 
-        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        //return resultPair;
-        return response;
     }
 
     public DataFile getDataFile(int id) {
@@ -341,16 +291,12 @@ public class SeekRestApiClient implements AutoCloseable {
     }
 
     public List<ApiResponseDatum> listDataFiles() {
-        SeekRestApiCollectionResponse response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> System.out.println(String.format("Connection attempt failed %s", failure)))     
-            .get(() -> CLIENT
+        return CLIENT
             .target(DATAFILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .get(SeekRestApiCollectionResponse.class));
+            .get(SeekRestApiCollectionResponse.class)
+            .getData();
         
-        List<ApiResponseDatum> assays = response.getData();
-        return assays;
     }
 
     public Response updateDataFile(String id, DataFile dataFile) {
@@ -362,19 +308,10 @@ public class SeekRestApiClient implements AutoCloseable {
     }
 
     public Response createModelFile(ModelFile modelFile) {
-        //AtomicInteger num = new AtomicInteger(1);
-        
-        Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            .get(() -> CLIENT
+        return CLIENT
             .target(MODEL_FILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .post(Entity.entity(modelFile, MediaType.APPLICATION_JSON)));
-
-        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        //return resultPair;
-        return response;
+            .post(Entity.entity(modelFile, MediaType.APPLICATION_JSON));
     }
 
     public ModelFile getModelFile(int id) {
@@ -386,20 +323,12 @@ public class SeekRestApiClient implements AutoCloseable {
     }
 
     public List<ApiResponseDatum> listModelFiles() {
-        //AtomicInteger num = new AtomicInteger(1);
-        
-        SeekRestApiCollectionResponse response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            .get(() -> CLIENT
+        return CLIENT
             .target(MODEL_FILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .get(SeekRestApiCollectionResponse.class));
+            .get(SeekRestApiCollectionResponse.class)
+            .getData();
         
-        List<ApiResponseDatum> assays = response.getData();
-        //Pair<Integer, List<ApiResponseDatum>> resultPair = new Pair(num.intValue(), assays);
-        //return resultPair;
-        return assays;
     }
 
     public Response updateModelFile(String id, ModelFile modelFile) {
@@ -411,19 +340,11 @@ public class SeekRestApiClient implements AutoCloseable {
     }
 
     public Response uploadDataFileContent(File dataFileContent, String path) throws Exception {
-        //AtomicInteger num = new AtomicInteger(1);
-
-        Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            .get(() -> CLIENT
+        return CLIENT
             .target(BASE_REST_URI).path(path)
             .request(MediaType.APPLICATION_JSON)
             .put(Entity.entity(Files.readAllBytes(dataFileContent.toPath()),
-                    MediaType.APPLICATION_OCTET_STREAM)));
+                    MediaType.APPLICATION_OCTET_STREAM));
         
-        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        //return resultPair;
-        return response;
     }
 }
