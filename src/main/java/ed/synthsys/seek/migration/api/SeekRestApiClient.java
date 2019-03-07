@@ -26,15 +26,15 @@ import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 import org.glassfish.jersey.logging.LoggingFeature;
-import ed.synthsys.seek.entity.common.ApiResponseDatum;
-import ed.synthsys.seek.entity.common.SeekRestApiCollectionResponse;
-import ed.synthsys.seek.entity.assay.Assay;
-import ed.synthsys.seek.entity.datafile.DataFile;
-import ed.synthsys.seek.entity.investigation.Investigation;
-import ed.synthsys.seek.entity.modelfile.ModelFile;
-import ed.synthsys.seek.entity.person.Person;
-import ed.synthsys.seek.entity.project.Project;
-import ed.synthsys.seek.entity.study.Study;
+import ed.synthsys.seek.dom.common.ApiResponseDatum;
+import ed.synthsys.seek.dom.common.SeekRestApiCollectionResponse;
+import ed.synthsys.seek.dom.assay.Assay;
+import ed.synthsys.seek.dom.datafile.DataFile;
+import ed.synthsys.seek.dom.investigation.Investigation;
+import ed.synthsys.seek.dom.modelfile.ModelFile;
+import ed.synthsys.seek.dom.person.Person;
+import ed.synthsys.seek.dom.project.Project;
+import ed.synthsys.seek.dom.study.Study;
 
 /**
  *
