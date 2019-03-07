@@ -92,5 +92,5 @@ In the event that the FAIRDOM SEEK REST API resource entity model changes, it mi
 
 6. Click on the 'Zip' button to download the generated classes
 
-![](/home/jhay/Documents/epcc/projects/plasmo/code_projects/Seek-Java-RESTClient/www_jsonschema2pojo_org.png)
+![](www_jsonschema2pojo_org.png)
 
