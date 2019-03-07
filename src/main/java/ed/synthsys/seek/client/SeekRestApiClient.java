@@ -10,10 +10,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.util.Pair;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -40,84 +38,94 @@ import ed.synthsys.seek.dom.study.Study;
  *
  * @author Johnny Hay
  */
-public class SeekRestApiClient {
+public class SeekRestApiClient implements AutoCloseable {
     
-    public SeekRestApiClient() {
-        this("https://fairdomhub.org/");
-    }
-
+    
     public SeekRestApiClient(String baseSeekURI) {
-        SeekRestApiClient.BASE_REST_URI = baseSeekURI;
-        SeekRestApiClient.PEOPLE_REST_URI = baseSeekURI + "people";
-        SeekRestApiClient.ASSAYS_REST_URI = baseSeekURI + "assays";
-        SeekRestApiClient.PROJECTS_REST_URI = baseSeekURI + "projects";
-        SeekRestApiClient.INVESTIGATIONS_REST_URI = baseSeekURI + "investigations";
-        SeekRestApiClient.STUDIES_REST_URI = baseSeekURI + "studies";
-        SeekRestApiClient.DATAFILES_REST_URI = baseSeekURI + "data_files";
-        SeekRestApiClient.MODEL_FILES_REST_URI = baseSeekURI + "models";
+        this(baseSeekURI,null,null);
     }
     
-    private static final String SEEK_USERNAME = "";
-    private static final String SEEK_PASSWORD = "";
+    public SeekRestApiClient(String baseSeekURI, String userName, String password) {
+        BASE_REST_URI = baseSeekURI;
+        PEOPLE_REST_URI = baseSeekURI + "people";
+        ASSAYS_REST_URI = baseSeekURI + "assays";
+        PROJECTS_REST_URI = baseSeekURI + "projects";
+        INVESTIGATIONS_REST_URI = baseSeekURI + "investigations";
+        STUDIES_REST_URI = baseSeekURI + "studies";
+        DATAFILES_REST_URI = baseSeekURI + "data_files";
+        MODEL_FILES_REST_URI = baseSeekURI + "models";
+        
+        JSON_MAPPER = new ObjectMapper();
+        CLIENT = initClient(userName,password);
+    } 
     
-    public static String BASE_REST_URI;
-    public static String PEOPLE_REST_URI;
-    public static String ASSAYS_REST_URI;
-    public static String PROJECTS_REST_URI;
-    public static String INVESTIGATIONS_REST_URI;
-    public static String STUDIES_REST_URI;
-    public static String DATAFILES_REST_URI;
-    public static String MODEL_FILES_REST_URI;
+    
+    boolean DEBUG = true;
+    String BASE_REST_URI;
+    String PEOPLE_REST_URI;
+    String ASSAYS_REST_URI;
+    String PROJECTS_REST_URI;
+    String INVESTIGATIONS_REST_URI;
+    String STUDIES_REST_URI;
+    String DATAFILES_REST_URI;
+    String MODEL_FILES_REST_URI;
   
-    private static ClientConfig clientConfig;
-    private static final Client CLIENT;
-    private static final long REQUEST_DELAY = 200;
-
-    private static final RetryPolicy RETRY_POLICY = new RetryPolicy()
+    Client CLIENT;
+    final ObjectMapper JSON_MAPPER;
+    
+    final RetryPolicy RETRY_POLICY = new RetryPolicy()
       .retryIf((Response response) -> response.getStatus() != 200)
       .withMaxRetries(3).withBackoff(1, 8, TimeUnit.SECONDS)
-      .withMaxDuration(60, TimeUnit.SECONDS);
+      .withMaxDuration(60, TimeUnit.SECONDS);    
     
-    private static class ShutDownHook extends Thread {  
-        public void run() {
-            System.out.println("Shutdown Hook is running !"); 
+    @Override
+    public void close() {
+        if (CLIENT != null) {
             CLIENT.close();
-        }  
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        close();
+        super.finalize(); 
     }
     
-    static {
-        HttpAuthenticationFeature feature = HttpAuthenticationFeature.basicBuilder()
-//            .nonPreemptive()
-            .credentials(SEEK_USERNAME, SEEK_PASSWORD)
-            .build();
+    private Client initClient(String userName, String password) {
         
-        clientConfig = new ClientConfig();
-        clientConfig.register(feature) ;
-        // configure client logging
-        clientConfig.register(new LoggingFeature(Logger.getLogger(
+        ClientConfig  clientConfig = new ClientConfig();
+        
+        if (userName != null) {
+            HttpAuthenticationFeature auth = HttpAuthenticationFeature.basicBuilder()
+            .credentials(userName, password)
+            .build();
+
+            clientConfig.register(auth) ;            
+        }
+        
+        if (DEBUG) {
+            // configure client logging
+            clientConfig.register(new LoggingFeature(Logger.getLogger(
                 LoggingFeature.DEFAULT_LOGGER_NAME), Level.INFO, 
                 LoggingFeature.Verbosity.PAYLOAD_ANY, 4096));
+        }
         
         clientConfig.property(ClientProperties.USE_ENCODING, "UTF-8");
         
-        CLIENT = ClientBuilder.newClient(clientConfig);
-        CLIENT.property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true);
-
-        ShutDownHook jvmShutdownHook = new ShutDownHook(); 
-        Runtime.getRuntime().addShutdownHook(jvmShutdownHook);
+        Client client = ClientBuilder.newClient(clientConfig);
+        client.property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true);
+        
+        return client;
     }
     
-    //private static final String USERNAME_PASSWORD = SEEK_USERNAME + ":" + SEEK_PASSWORD;
-    //private static final String AUTH_HEADER_VALUE = "Basic " + java.util.Base64.getEncoder().encodeToString( USERNAME_PASSWORD.getBytes() );
     
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
- 
+    
+    public void login(String userName, String password) {
+        CLIENT.close();
+        CLIENT = initClient(userName, password);
+    }
+    
     public Response createPerson(Person person) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
             .onFailedAttempt((result, failure, context) -> System.out.println(String.format("Connection attempt failed %s", failure)))     
@@ -125,15 +133,9 @@ public class SeekRestApiClient {
                 .target(PEOPLE_REST_URI)
                 .request(MediaType.APPLICATION_JSON)
                 .method("PATCH", Entity.entity(person, MediaType.APPLICATION_JSON)));
-//            .post(Entity.entity(person, MediaType.APPLICATION_JSON));
     }
 
     public Person getPerson(int id) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(PEOPLE_REST_URI)
             .path(String.valueOf(id))
@@ -142,11 +144,6 @@ public class SeekRestApiClient {
     }
     
     public Response updatePerson(String id, Person person) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(PEOPLE_REST_URI)
             .path(String.valueOf(id))
@@ -155,26 +152,15 @@ public class SeekRestApiClient {
     }
     
     public Response listPeople() {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         Response response = CLIENT
             .target(PEOPLE_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .get(Response.class);
         
-//        List<ApiResponseDatum> people = response.getData();
         return response;
     }
 
     public Response createProject(Project project) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
             .onFailedAttempt((result, failure, context) -> System.out.println(String.format("Connection attempt failed %s", failure)))     
@@ -182,15 +168,9 @@ public class SeekRestApiClient {
             .target(PROJECTS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(project, MediaType.APPLICATION_JSON)));
-//            .post(Entity.entity(project, MediaType.APPLICATION_JSON), Project.class);
     }
 
     public Project getProject(int id) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(PROJECTS_REST_URI)
             .path(String.valueOf(id))
@@ -199,11 +179,6 @@ public class SeekRestApiClient {
     }
     
     public List<ApiResponseDatum> listProjects() {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         SeekRestApiCollectionResponse response = CLIENT
             .target(PROJECTS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
@@ -213,53 +188,25 @@ public class SeekRestApiClient {
         return projects;
     }
     
-    private void handleFailedAttempt(int num) {
-        num++;
-    }
-
-    /*public Response createInvestigation(Investigation investigation) {
-        Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
-            .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> System.out.println(String.format("Connection attempt failed %s", failure)))     
-            .get(() -> CLIENT
-            .target(INVESTIGATIONS_REST_URI)
-            .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
-            .post(Entity.entity(investigation, MediaType.APPLICATION_JSON)));
-        
-        return response;
-    }*/
     
-    public Pair<Integer, Response> createInvestigation(Investigation investigation) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-//        int num = 1;
-        AtomicInteger num = new AtomicInteger(1);
+    public Response createInvestigation(Investigation investigation) {
+        //AtomicInteger num = new AtomicInteger(1);
 
         Response response = Failsafe.with(RETRY_POLICY)
             .onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            //.onFailedAttempt((result, failure, context) -> handleFailedAttempt(num))     
+            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
             .get(() -> CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(investigation, MediaType.APPLICATION_JSON)));
         
-        Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        return resultPair;
+        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
+        //return resultPair;
+        return response;
     }
 
     public Investigation getInvestigation(int id) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .path(String.valueOf(id))
@@ -268,11 +215,6 @@ public class SeekRestApiClient {
     }
 
     public List<ApiResponseDatum> listInvestigations() {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         SeekRestApiCollectionResponse response = CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
@@ -283,11 +225,6 @@ public class SeekRestApiClient {
     }
 
     public Response updateInvestigation(String id, Investigation investigation) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .path(String.valueOf(id))
@@ -295,35 +232,23 @@ public class SeekRestApiClient {
             .put(Entity.entity(investigation, MediaType.APPLICATION_JSON));
     }
 
-    public Pair<Integer, Response> createStudy(Study study) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-//        int num = 1;
-        AtomicInteger num = new AtomicInteger(1);
+    public Response createStudy(Study study) {
+        //AtomicInteger num = new AtomicInteger(1);
         
         Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            //.onFailedAttempt((result, failure, context) -> handleFailedAttempt(num)) 
+            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
             .get(() -> CLIENT
             .target(STUDIES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(study, MediaType.APPLICATION_JSON)));
         
-        Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        return resultPair;
+        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
+        //return resultPair;
+        return response;
     }
 
     public Study getStudy(int id) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(STUDIES_REST_URI)
             .path(String.valueOf(id))
@@ -332,11 +257,6 @@ public class SeekRestApiClient {
     }
 
     public List<ApiResponseDatum> listStudies() {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         SeekRestApiCollectionResponse response = CLIENT
             .target(STUDIES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
@@ -347,11 +267,6 @@ public class SeekRestApiClient {
     }
 
     public Response updateStudy(String id, Study study) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(STUDIES_REST_URI)
             .path(String.valueOf(id))
@@ -359,35 +274,23 @@ public class SeekRestApiClient {
             .put(Entity.entity(study, MediaType.APPLICATION_JSON));
     }
 
-    public Pair<Integer, Response> createAssay(Assay assay) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-//        int num = 1;
-        AtomicInteger num = new AtomicInteger(1);
+    public Response createAssay(Assay assay) {
+        //AtomicInteger num = new AtomicInteger(1);
         
         Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            //.onFailedAttempt((result, failure, context) -> handleFailedAttempt(num)) 
+            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
             .get(() -> CLIENT
             .target(ASSAYS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(assay, MediaType.APPLICATION_JSON)));
     
-        Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        return resultPair;
+        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
+        //return resultPair;
+        return response;
     }
 
     public Assay getAssay(int id) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(ASSAYS_REST_URI)
             .path(String.valueOf(id))
@@ -396,15 +299,9 @@ public class SeekRestApiClient {
     }
 
     public List<ApiResponseDatum> listAssays() {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         SeekRestApiCollectionResponse response = CLIENT
             .target(ASSAYS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            //.header("Authorization", AUTH_HEADER_VALUE)
             .get(SeekRestApiCollectionResponse.class);
         
         List<ApiResponseDatum> assays = response.getData();
@@ -412,11 +309,6 @@ public class SeekRestApiClient {
     }
 
     public Response updateAssay(String id, Assay assay) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(ASSAYS_REST_URI)
             .path(String.valueOf(id))
@@ -424,35 +316,23 @@ public class SeekRestApiClient {
             .put(Entity.entity(assay, MediaType.APPLICATION_JSON));
     }
 
-    public Pair<Integer, Response> createDataFile(DataFile dataFile) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-//        int num = 1;
-        AtomicInteger num = new AtomicInteger(1);
+    public Response createDataFile(DataFile dataFile) {
+        //AtomicInteger num = new AtomicInteger(1);
         
         Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            //.onFailedAttempt((result, failure, context) -> handleFailedAttempt(num)) 
+            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
             .get(() -> CLIENT
             .target(DATAFILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(dataFile, MediaType.APPLICATION_JSON)));
 
-        Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        return resultPair;
+        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
+        //return resultPair;
+        return response;
     }
 
     public DataFile getDataFile(int id) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(DATAFILES_REST_URI)
             .path(String.valueOf(id))
@@ -461,11 +341,6 @@ public class SeekRestApiClient {
     }
 
     public List<ApiResponseDatum> listDataFiles() {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         SeekRestApiCollectionResponse response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
             .onFailedAttempt((result, failure, context) -> System.out.println(String.format("Connection attempt failed %s", failure)))     
@@ -479,11 +354,6 @@ public class SeekRestApiClient {
     }
 
     public Response updateDataFile(String id, DataFile dataFile) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(DATAFILES_REST_URI)
             .path(String.valueOf(id))
@@ -491,35 +361,23 @@ public class SeekRestApiClient {
             .put(Entity.entity(dataFile, MediaType.APPLICATION_JSON));
     }
 
-    public Pair<Integer, Response> createModelFile(ModelFile modelFile) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-//        int num = 1;
-        AtomicInteger num = new AtomicInteger(1);
+    public Response createModelFile(ModelFile modelFile) {
+        //AtomicInteger num = new AtomicInteger(1);
         
         Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            //.onFailedAttempt((result, failure, context) -> handleFailedAttempt(num)) 
+            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
             .get(() -> CLIENT
             .target(MODEL_FILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(modelFile, MediaType.APPLICATION_JSON)));
 
-        Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        return resultPair;
+        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
+        //return resultPair;
+        return response;
     }
 
     public ModelFile getModelFile(int id) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(MODEL_FILES_REST_URI)
             .path(String.valueOf(id))
@@ -527,36 +385,24 @@ public class SeekRestApiClient {
             .get(ModelFile.class);
     }
 
-    public Pair<Integer, List<ApiResponseDatum>> listModelFiles() {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-//        int num = 1;
-        AtomicInteger num = new AtomicInteger(1);
+    public List<ApiResponseDatum> listModelFiles() {
+        //AtomicInteger num = new AtomicInteger(1);
         
         SeekRestApiCollectionResponse response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            //.onFailedAttempt((result, failure, context) -> handleFailedAttempt(num)) 
+            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
             .get(() -> CLIENT
             .target(MODEL_FILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .get(SeekRestApiCollectionResponse.class));
         
         List<ApiResponseDatum> assays = response.getData();
-        Pair<Integer, List<ApiResponseDatum>> resultPair = new Pair(num.intValue(), assays);
-        return resultPair;
+        //Pair<Integer, List<ApiResponseDatum>> resultPair = new Pair(num.intValue(), assays);
+        //return resultPair;
+        return assays;
     }
 
     public Response updateModelFile(String id, ModelFile modelFile) {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return CLIENT
             .target(MODEL_FILES_REST_URI)
             .path(String.valueOf(id))
@@ -564,28 +410,20 @@ public class SeekRestApiClient {
             .put(Entity.entity(modelFile, MediaType.APPLICATION_JSON));
     }
 
-    public Pair<Integer,Response> uploadDataFileContent(File dataFileContent, String path) 
-        throws Exception {
-        try {
-            Thread.sleep(REQUEST_DELAY);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(SeekRestApiClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-//        int num = 1;
-        AtomicInteger num = new AtomicInteger(1);
+    public Response uploadDataFileContent(File dataFileContent, String path) throws Exception {
+        //AtomicInteger num = new AtomicInteger(1);
 
         Response response = Failsafe.with(RETRY_POLICY).onSuccess(cxn -> System.out.println(String.format("SUCCESS!!!! %s", cxn)))
             .onFailure(failure -> System.out.println(String.format("Failed to create connection %s", failure)))
-            .onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
-            //.onFailedAttempt((result, failure, context) -> handleFailedAttempt(num)) 
+            //.onFailedAttempt((result, failure, context) -> num.incrementAndGet())     
             .get(() -> CLIENT
             .target(BASE_REST_URI).path(path)
             .request(MediaType.APPLICATION_JSON)
             .put(Entity.entity(Files.readAllBytes(dataFileContent.toPath()),
                     MediaType.APPLICATION_OCTET_STREAM)));
         
-        Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
-        return resultPair;
+        //Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
+        //return resultPair;
+        return response;
     }
 }

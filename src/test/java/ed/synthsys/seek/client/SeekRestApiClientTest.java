@@ -7,12 +7,16 @@ package ed.synthsys.seek.client;
 
 import ed.synthsys.seek.dom.assay.Assay;
 import ed.synthsys.seek.dom.common.ApiResponseDatum;
+import ed.synthsys.seek.dom.datafile.DataFile;
 import ed.synthsys.seek.dom.investigation.Investigation;
 import ed.synthsys.seek.dom.study.Study;
 import java.util.List;
+import javax.ws.rs.ForbiddenException;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
 
 /**
  *
@@ -24,11 +28,17 @@ public class SeekRestApiClientTest {
     }
     
     static String seekURI = "https://fairdomhub.org/";
+    
+    // don't commit real username and password
+    static String userName = "test";
+    static String password = "test";
+    
     static int publicInvestigationId = 251;
     static int publicAssayId = 840;
     static int publicStudyId = 485;
     
-    static int privateAssayId = 797;
+    static int privateFileId = 2423;
+    static int publicFileId = 2501;
     
     
     SeekRestApiClient client;
@@ -37,6 +47,11 @@ public class SeekRestApiClientTest {
     public void setUp() {
         
         client = new SeekRestApiClient(seekURI);
+    }
+    
+    @After 
+    public void tear() {
+        client.close();
     }
 
     @Test
@@ -63,12 +78,44 @@ public class SeekRestApiClientTest {
     }
     
     @Test
-    public void testGetPrivateAssayWorks() {
-        Assay assay = client.getAssay(privateAssayId);
-        assertNotNull(assay);
-        assertNotNull(assay.getData().getAttributes().getTitle());
-        assertEquals("CHecking if all works - PLM_1000, version 2", assay.getData().getAttributes().getTitle());
+    public void testGetPrivateThrowsExceptionWithoutUser() {
+        
+        try {
+            DataFile file = client.getDataFile(privateFileId);
+            fail("Got private file without login");
+        } catch (ForbiddenException e) {
+            //as expected
+        }
+            
+    }   
+    
+    @Test
+    @Ignore("Cause needs valid user and password")    
+    public void testGetPrivateFileWorks() {
+        DataFile file;
+        
+        try {
+            file = client.getDataFile(privateFileId);
+            fail("Got private file without login");
+        } catch (ForbiddenException e) {
+            //as expected
+        }
+            
+        client.login(userName, password);
+        file = client.getDataFile(privateFileId);
+        assertNotNull(file);
+        assertNotNull(file.getData().getAttributes().getTitle());
+        assertEquals("radio,PLM_1000_ 2", file.getData().getAttributes().getTitle());
     }    
+    
+    @Test
+    public void testGetPublicFileWorks() {
+        DataFile file = client.getDataFile(publicFileId);
+        assertNotNull(file);
+        assertNotNull(file.getData().getAttributes().getTitle());
+        assertEquals("Fig. 1, outline of P2011 model, with P2010 inset,PLM_64_ 3", file.getData().getAttributes().getTitle());
+    }    
+    
     
     @Test
     public void testAssaysWorks() {
@@ -76,6 +123,21 @@ public class SeekRestApiClientTest {
         assertTrue(assays.size() > 0);
         
     }     
+    
+    @Test
+    @Ignore("Cause needs valid user and password")    
+    public void testAssaysWithUserWorks() {
+        List<ApiResponseDatum> assays = client.listAssays();
+        assertTrue(assays.size() > 0);
+        
+        int pub = assays.size();
+        client.login(userName, password);
+        
+        assays = client.listAssays();
+        assertTrue(assays.size() > 0);
+        assertTrue(assays.size() > pub);
+    }     
+    
     
     @Test
     public void testGetStudyWorks() {
