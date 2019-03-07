@@ -5,6 +5,9 @@
  */
 package ed.synthsys.seek.client;
 
+import ed.synthsys.seek.dom.assay.Assay;
+import ed.synthsys.seek.dom.investigation.Investigation;
+import ed.synthsys.seek.dom.study.Study;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -18,14 +21,47 @@ public class SeekRestApiClientTest {
     public SeekRestApiClientTest() {
     }
     
+    static String seekURI = "https://fairdomhub.org/";
+    static int publicInvestigationId = 251;
+    static int publicAssayId = 840;
+    static int publicStudyId = 485;
+    
+    SeekRestApiClient client;
+    
     @Before
     public void setUp() {
+        
+        client = new SeekRestApiClient(seekURI);
     }
 
     @Test
-    public void testSomeMethod() {
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+    public void testSetupWorks() {
+        
+        assertNotNull(client);
     }
     
+    @Test
+    public void testGetInvestigationWorks() {
+        
+        Investigation investigation = client.getInvestigation(publicInvestigationId);
+        assertNotNull(investigation);
+        assertNotNull(investigation.getData().getAttributes().getTitle());
+        assertEquals("Millar, Andrew", investigation.getData().getAttributes().getTitle());
+    }
+    
+    @Test
+    public void testGetAssayWorks() {
+        Assay assay = client.getAssay(publicAssayId);
+        assertNotNull(assay);
+        assertNotNull(assay.getData().getAttributes().getTitle());
+        assertEquals("Arabidopsis_clock_P2011 - PLM_64, version 3", assay.getData().getAttributes().getTitle());
+    }
+    
+    @Test
+    public void testGetStudyWorks() {
+        Study study = client.getStudy(publicStudyId);
+        assertNotNull(study);
+        assertNotNull(study.getData().getAttributes().getTitle());
+        assertEquals("Arabidopsis clock model P2011.4.1 - PLM_1042", study.getData().getAttributes().getTitle());
+    }    
 }
