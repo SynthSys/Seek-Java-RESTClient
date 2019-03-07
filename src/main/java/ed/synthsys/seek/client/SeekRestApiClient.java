@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package ed.synthsys.seek.migration.api;
+package ed.synthsys.seek.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -43,7 +43,7 @@ import ed.synthsys.seek.dom.study.Study;
 public class SeekRestApiClient {
     
     public SeekRestApiClient() {
-        new SeekRestApiClient("https://fairdomhub.org/");
+        this("https://fairdomhub.org/");
     }
 
     public SeekRestApiClient(String baseSeekURI) {
