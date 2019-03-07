@@ -6,8 +6,10 @@
 package ed.synthsys.seek.client;
 
 import ed.synthsys.seek.dom.assay.Assay;
+import ed.synthsys.seek.dom.common.ApiResponseDatum;
 import ed.synthsys.seek.dom.investigation.Investigation;
 import ed.synthsys.seek.dom.study.Study;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -25,6 +27,9 @@ public class SeekRestApiClientTest {
     static int publicInvestigationId = 251;
     static int publicAssayId = 840;
     static int publicStudyId = 485;
+    
+    static int privateAssayId = 797;
+    
     
     SeekRestApiClient client;
     
@@ -56,6 +61,21 @@ public class SeekRestApiClientTest {
         assertNotNull(assay.getData().getAttributes().getTitle());
         assertEquals("Arabidopsis_clock_P2011 - PLM_64, version 3", assay.getData().getAttributes().getTitle());
     }
+    
+    @Test
+    public void testGetPrivateAssayWorks() {
+        Assay assay = client.getAssay(privateAssayId);
+        assertNotNull(assay);
+        assertNotNull(assay.getData().getAttributes().getTitle());
+        assertEquals("CHecking if all works - PLM_1000, version 2", assay.getData().getAttributes().getTitle());
+    }    
+    
+    @Test
+    public void testAssaysWorks() {
+        List<ApiResponseDatum> assays = client.listAssays();
+        assertTrue(assays.size() > 0);
+        
+    }     
     
     @Test
     public void testGetStudyWorks() {

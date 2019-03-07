@@ -107,8 +107,8 @@ public class SeekRestApiClient {
         Runtime.getRuntime().addShutdownHook(jvmShutdownHook);
     }
     
-    private static final String USERNAME_PASSWORD = SEEK_USERNAME + ":" + SEEK_PASSWORD;
-    private static final String AUTH_HEADER_VALUE = "Basic " + java.util.Base64.getEncoder().encodeToString( USERNAME_PASSWORD.getBytes() );
+    //private static final String USERNAME_PASSWORD = SEEK_USERNAME + ":" + SEEK_PASSWORD;
+    //private static final String AUTH_HEADER_VALUE = "Basic " + java.util.Base64.getEncoder().encodeToString( USERNAME_PASSWORD.getBytes() );
     
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
  
@@ -124,7 +124,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
                 .target(PEOPLE_REST_URI)
                 .request(MediaType.APPLICATION_JSON)
-                .header("Authorization", AUTH_HEADER_VALUE)
                 .method("PATCH", Entity.entity(person, MediaType.APPLICATION_JSON)));
 //            .post(Entity.entity(person, MediaType.APPLICATION_JSON));
     }
@@ -139,7 +138,6 @@ public class SeekRestApiClient {
             .target(PEOPLE_REST_URI)
             .path(String.valueOf(id))
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .get(Person.class);
     }
     
@@ -165,7 +163,6 @@ public class SeekRestApiClient {
         Response response = CLIENT
             .target(PEOPLE_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .get(Response.class);
         
 //        List<ApiResponseDatum> people = response.getData();
@@ -184,7 +181,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(PROJECTS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .post(Entity.entity(project, MediaType.APPLICATION_JSON)));
 //            .post(Entity.entity(project, MediaType.APPLICATION_JSON), Project.class);
     }
@@ -211,7 +207,6 @@ public class SeekRestApiClient {
         SeekRestApiCollectionResponse response = CLIENT
             .target(PROJECTS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .get(SeekRestApiCollectionResponse.class);
         
         List<ApiResponseDatum> projects = response.getData();
@@ -253,7 +248,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .post(Entity.entity(investigation, MediaType.APPLICATION_JSON)));
         
         Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
@@ -282,7 +276,6 @@ public class SeekRestApiClient {
         SeekRestApiCollectionResponse response = CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .get(SeekRestApiCollectionResponse.class);
         
         List<ApiResponseDatum> investigations = response.getData();
@@ -319,7 +312,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(STUDIES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .post(Entity.entity(study, MediaType.APPLICATION_JSON)));
         
         Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
@@ -348,7 +340,6 @@ public class SeekRestApiClient {
         SeekRestApiCollectionResponse response = CLIENT
             .target(STUDIES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .get(SeekRestApiCollectionResponse.class);
         
         List<ApiResponseDatum> studies = response.getData();
@@ -385,7 +376,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(ASSAYS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .post(Entity.entity(assay, MediaType.APPLICATION_JSON)));
     
         Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
@@ -414,7 +404,7 @@ public class SeekRestApiClient {
         SeekRestApiCollectionResponse response = CLIENT
             .target(ASSAYS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
+            //.header("Authorization", AUTH_HEADER_VALUE)
             .get(SeekRestApiCollectionResponse.class);
         
         List<ApiResponseDatum> assays = response.getData();
@@ -451,7 +441,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(DATAFILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .post(Entity.entity(dataFile, MediaType.APPLICATION_JSON)));
 
         Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
@@ -483,7 +472,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(DATAFILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .get(SeekRestApiCollectionResponse.class));
         
         List<ApiResponseDatum> assays = response.getData();
@@ -520,7 +508,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(MODEL_FILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .post(Entity.entity(modelFile, MediaType.APPLICATION_JSON)));
 
         Pair<Integer, Response> resultPair = new Pair(num.intValue(), response);
@@ -557,7 +544,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(MODEL_FILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .get(SeekRestApiCollectionResponse.class));
         
         List<ApiResponseDatum> assays = response.getData();
@@ -596,7 +582,6 @@ public class SeekRestApiClient {
             .get(() -> CLIENT
             .target(BASE_REST_URI).path(path)
             .request(MediaType.APPLICATION_JSON)
-            .header("Authorization", AUTH_HEADER_VALUE)
             .put(Entity.entity(Files.readAllBytes(dataFileContent.toPath()),
                     MediaType.APPLICATION_OCTET_STREAM)));
         
