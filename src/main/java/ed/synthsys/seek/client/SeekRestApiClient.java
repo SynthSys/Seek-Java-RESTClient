@@ -150,7 +150,7 @@ public class SeekRestApiClient implements AutoCloseable {
             .get(Person.class);
     }
     
-    public void updatePerson(String id, Person person) {
+    public void updatePerson(int id, Person person) {
         Response response = CLIENT
             .target(PEOPLE_REST_URI)
             .path(String.valueOf(id))
@@ -227,7 +227,7 @@ public class SeekRestApiClient implements AutoCloseable {
         return investigations;
     }
 
-    public Investigation updateInvestigation(String id, Investigation investigation) {
+    public Investigation updateInvestigation(int id, Investigation investigation) {
         Response response = CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .path(String.valueOf(id))
@@ -268,7 +268,7 @@ public class SeekRestApiClient implements AutoCloseable {
         return studies;
     }
 
-    public Study updateStudy(String id, Study study) {
+    public Study updateStudy(int id, Study study) {
         Response response = CLIENT
             .target(STUDIES_REST_URI)
             .path(String.valueOf(id))
@@ -347,7 +347,7 @@ public class SeekRestApiClient implements AutoCloseable {
         
     }
 
-    public DataFile updateDataFile(String id, DataFile dataFile) {
+    public DataFile updateDataFile(int id, DataFile dataFile) {
         Response response =  CLIENT
             .target(DATAFILES_REST_URI)
             .path(String.valueOf(id))
@@ -385,7 +385,7 @@ public class SeekRestApiClient implements AutoCloseable {
         
     }
 
-    public ModelFile updateModelFile(String id, ModelFile modelFile) {
+    public ModelFile updateModelFile(int id, ModelFile modelFile) {
         Response response = CLIENT
             .target(MODEL_FILES_REST_URI)
             .path(String.valueOf(id))
