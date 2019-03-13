@@ -18,7 +18,7 @@ To use the library, simply clone this repository and run `mvn clean install` to 
             <artifactId>seek-dom</artifactId>
             <version>1.0</version>
         </dependency>
-Once the dependency is available in your Java project, all API functions are exposed through the `ed.synthsys.seek.client.SeekRestApiClient` main client class. A client object should be instantiated with the base URI of the SEEK REST API - for example, `https://fairdomhub.org/` for the public FAIRDOMHub repository - and your username and password, as specified by the `SeekRestApiClient(String baseSeekURI, String userName, String password)` constructor. After construction, invoke the `login` method to initialise the client and then API methods such as `createInvestigation`, `getStudy` and `updateAssay` are made available.
+Once the dependency is available in your Java project, all API functions are exposed through the `ed.synthsys.seek.client.SeekRestApiClient` main client class. A client object should be instantiated with the base URI of the SEEK REST API - for example, `https://fairdomhub.org/` for the public FAIRDOMHub repository - and your username and password, as specified by the `SeekRestApiClient(String baseSeekURI, String userName, String password)` constructor (or you can provide the credentials using login method). After construction, invoke the API methods such as `getStudy`, `createInvestigation` or `updateAssay`. Check the test package for examples.
 
 ## Updating the SEEK Entity Classes
 
