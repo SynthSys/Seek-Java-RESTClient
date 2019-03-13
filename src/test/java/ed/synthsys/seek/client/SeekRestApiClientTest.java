@@ -29,9 +29,11 @@ public class SeekRestApiClientTest {
     
     static String seekURI = "https://fairdomhub.org/";
     
+    static boolean login = false;
     // don't commit real username and password
     static String userName = "test";
     static String password = "test";
+    
     
     static int publicInvestigationId = 251;
     static int publicAssayId = 840;
@@ -40,18 +42,29 @@ public class SeekRestApiClientTest {
     static int privateFileId = 2423;
     static int publicFileId = 2501;
     
+    static int privateInvestigationId = 247;
+    static int privateStudyId = 465;
+    static int privateAssayId = 796;
+    
     
     SeekRestApiClient client;
+    SeekRestApiClient loggedClient;
     
     @Before
     public void setUp() {
         
         client = new SeekRestApiClient(seekURI);
+        if (login) {
+            loggedClient = new SeekRestApiClient(seekURI,userName, password);
+        }
     }
     
     @After 
     public void tear() {
         client.close();
+        if (loggedClient != null) {
+            loggedClient.close();
+        }
     }
 
     @Test
@@ -90,7 +103,7 @@ public class SeekRestApiClientTest {
     }   
     
     @Test
-    @Ignore("Cause needs valid user and password")    
+    //@Ignore("Cause needs valid user and password")    
     public void testGetPrivateFileWorks() {
         DataFile file;
         
@@ -101,12 +114,73 @@ public class SeekRestApiClientTest {
             //as expected
         }
             
-        client.login(userName, password);
-        file = client.getDataFile(privateFileId);
+        org.junit.Assume.assumeTrue(loggedClient != null);        
+        file = loggedClient.getDataFile(privateFileId);
         assertNotNull(file);
         assertNotNull(file.getData().getAttributes().getTitle());
         assertEquals("radio,PLM_1000_ 2", file.getData().getAttributes().getTitle());
+    }   
+    
+    @Test
+    // @Ignore("Cause needs valid user and password")    
+    public void testAssaysWithUserWorks() {
+        org.junit.Assume.assumeTrue(loggedClient != null);        
+        
+        List<ApiResponseDatum> assays = client.listAssays();
+        assertTrue(assays.size() > 0);
+        
+        int pub = assays.size();
+        
+        assays = loggedClient.listAssays();
+        assertTrue(assays.size() > 0);
+        assertTrue(assays.size() > pub);
+    }     
+    
+    @Test
+    // @Ignore("Cause needs valid user and password")    
+    public void testUpdateAssaysWorks() {
+        org.junit.Assume.assumeTrue(loggedClient != null);        
+        
+        Assay assay = loggedClient.getAssay(privateAssayId);
+        
+        assertNotNull(assay);
+        String orgTit = assay.getData().getAttributes().getTitle();
+        
+        String newTit = orgTit+"1";
+        assay.getData().getAttributes().setTitle(newTit);
+        
+        assay = loggedClient.updateAssay(privateAssayId, assay);
+        assertEquals(newTit, assay.getData().getAttributes().getTitle());
+        
+        assay = loggedClient.getAssay(privateAssayId);
+        assertNotEquals(orgTit, assay.getData().getAttributes().getTitle());
+        assertEquals(newTit, assay.getData().getAttributes().getTitle());
+        
+    }
+    
+    @Test
+    //@Ignore("Cause needs valid user and password")    
+    public void testCreateAssaysWorks() {
+
+        org.junit.Assume.assumeTrue(loggedClient != null);        
+        Assay assay = loggedClient.getAssay(privateAssayId);
+        
+        assertNotNull(assay);
+        assertEquals(privateAssayId, assay.getData().getId().intValue());
+        
+        String newTit = "Test created "+System.currentTimeMillis();
+        
+        assay.getData().getAttributes().setTitle(newTit);
+        assay.getData().setId(null);
+        
+        assay = loggedClient.createAssay(assay);
+        assertNotEquals(assay.getData().getId().intValue(), privateAssayId);
+        
+        assay = loggedClient.getAssay(assay.getData().getId());
+        assertEquals(newTit, assay.getData().getAttributes().getTitle());
+        
     }    
+    
     
     @Test
     public void testGetPublicFileWorks() {
@@ -124,19 +198,7 @@ public class SeekRestApiClientTest {
         
     }     
     
-    @Test
-    @Ignore("Cause needs valid user and password")    
-    public void testAssaysWithUserWorks() {
-        List<ApiResponseDatum> assays = client.listAssays();
-        assertTrue(assays.size() > 0);
-        
-        int pub = assays.size();
-        client.login(userName, password);
-        
-        assays = client.listAssays();
-        assertTrue(assays.size() > 0);
-        assertTrue(assays.size() > pub);
-    }     
+    
     
     
     @Test

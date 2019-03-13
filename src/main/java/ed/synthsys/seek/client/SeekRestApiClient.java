@@ -5,6 +5,9 @@
  */
 package ed.synthsys.seek.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.List;
@@ -23,12 +26,17 @@ import org.glassfish.jersey.logging.LoggingFeature;
 import ed.synthsys.seek.dom.common.ApiResponseDatum;
 import ed.synthsys.seek.dom.common.SeekRestApiCollectionResponse;
 import ed.synthsys.seek.dom.assay.Assay;
+import ed.synthsys.seek.dom.common.SeekRestApiError;
 import ed.synthsys.seek.dom.datafile.DataFile;
 import ed.synthsys.seek.dom.investigation.Investigation;
 import ed.synthsys.seek.dom.modelfile.ModelFile;
 import ed.synthsys.seek.dom.person.Person;
 import ed.synthsys.seek.dom.project.Project;
 import ed.synthsys.seek.dom.study.Study;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -52,6 +60,8 @@ public class SeekRestApiClient implements AutoCloseable {
         MODEL_FILES_REST_URI = baseSeekURI + "models";
         
         CLIENT = initClient(userName,password);
+        JSON_MAPPER = new ObjectMapper();
+        JSON_MAPPER.configure(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES, true);        
     } 
     
     
@@ -64,8 +74,10 @@ public class SeekRestApiClient implements AutoCloseable {
     String STUDIES_REST_URI;
     String DATAFILES_REST_URI;
     String MODEL_FILES_REST_URI;
+    boolean logged = false;
   
     Client CLIENT;
+    final ObjectMapper JSON_MAPPER;
     
     
     @Override
@@ -90,7 +102,10 @@ public class SeekRestApiClient implements AutoCloseable {
             .credentials(userName, password)
             .build();
 
-            clientConfig.register(auth) ;            
+            clientConfig.register(auth) ;  
+            logged = true;
+        } else {
+            logged = false;
         }
         
         if (DEBUG) {
@@ -108,18 +123,23 @@ public class SeekRestApiClient implements AutoCloseable {
         return client;
     }
     
-    
+    public boolean isLogged() {
+        return this.logged;
+    }
     
     public void login(String userName, String password) {
         CLIENT.close();
         CLIENT = initClient(userName, password);
     }
     
-    public Response createPerson(Person person) {
-        return CLIENT
+    public void createPerson(Person person) {
+        Response response = CLIENT
                 .target(PEOPLE_REST_URI)
                 .request(MediaType.APPLICATION_JSON)
                 .method("PATCH", Entity.entity(person, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"CreatePerson");
+
     }
 
     public Person getPerson(int id) {
@@ -130,28 +150,33 @@ public class SeekRestApiClient implements AutoCloseable {
             .get(Person.class);
     }
     
-    public Response updatePerson(String id, Person person) {
-        return CLIENT
+    public void updatePerson(String id, Person person) {
+        Response response = CLIENT
             .target(PEOPLE_REST_URI)
             .path(String.valueOf(id))
             .request(MediaType.APPLICATION_JSON)
             .put(Entity.entity(person, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"UpdatePerson "+id);
+        
     }
     
-    public Response listPeople() {
-        Response response = CLIENT
+    public List<ApiResponseDatum> listPeople() {
+        return CLIENT
             .target(PEOPLE_REST_URI)
             .request(MediaType.APPLICATION_JSON)
-            .get(Response.class);
-        
-        return response;
+            .get(SeekRestApiCollectionResponse.class)
+            .getData();        
     }
 
-    public Response createProject(Project project) {
-        return CLIENT
+    public Project createProject(Project project) {
+        Response response = CLIENT
             .target(PROJECTS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(project, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"CreateProject");        
+        return response.readEntity(Project.class);
     }
 
     public Project getProject(int id) {
@@ -173,11 +198,14 @@ public class SeekRestApiClient implements AutoCloseable {
     }
     
     
-    public Response createInvestigation(Investigation investigation) {
-        return CLIENT
+    public Investigation createInvestigation(Investigation investigation) {
+        Response response = CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(investigation, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"CreateInvestigation");
+        return response.readEntity(Investigation.class);
         
     }
 
@@ -199,19 +227,27 @@ public class SeekRestApiClient implements AutoCloseable {
         return investigations;
     }
 
-    public Response updateInvestigation(String id, Investigation investigation) {
-        return CLIENT
+    public Investigation updateInvestigation(String id, Investigation investigation) {
+        Response response = CLIENT
             .target(INVESTIGATIONS_REST_URI)
             .path(String.valueOf(id))
             .request(MediaType.APPLICATION_JSON)
             .put(Entity.entity(investigation, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"UpdateInvestigation "+id);
+        return response.readEntity(Investigation.class);
+        
     }
 
-    public Response createStudy(Study study) {
-        return CLIENT
+    public Study createStudy(Study study) {
+        Response response =  CLIENT
             .target(STUDIES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(study, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"CreateStudy");
+        return response.readEntity(Study.class);
+        
     }
 
     public Study getStudy(int id) {
@@ -232,22 +268,28 @@ public class SeekRestApiClient implements AutoCloseable {
         return studies;
     }
 
-    public Response updateStudy(String id, Study study) {
-        return CLIENT
+    public Study updateStudy(String id, Study study) {
+        Response response = CLIENT
             .target(STUDIES_REST_URI)
             .path(String.valueOf(id))
             .request(MediaType.APPLICATION_JSON)
             .put(Entity.entity(study, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"UpdateStudy "+id);
+        return response.readEntity(Study.class);
     }
 
-    public Response createAssay(Assay assay) {
-        return CLIENT
+    public Assay createAssay(Assay assay) {
+        
+        Response response = CLIENT
             .target(ASSAYS_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(assay, MediaType.APPLICATION_JSON));
-    
+        
+        verifyAPISuccess(response,"CreateAssay");
+        return response.readEntity(Assay.class);
     }
-
+    
     public Assay getAssay(int id) {
         return CLIENT
             .target(ASSAYS_REST_URI)
@@ -266,19 +308,25 @@ public class SeekRestApiClient implements AutoCloseable {
         return assays;
     }
 
-    public Response updateAssay(String id, Assay assay) {
-        return CLIENT
+    public Assay updateAssay(int id, Assay assay) {
+        Response response = CLIENT
             .target(ASSAYS_REST_URI)
             .path(String.valueOf(id))
             .request(MediaType.APPLICATION_JSON)
             .put(Entity.entity(assay, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"UpdateAssay "+id);
+        return response.readEntity(Assay.class);
     }
 
-    public Response createDataFile(DataFile dataFile) {
-        return CLIENT
+    public DataFile createDataFile(DataFile dataFile) {
+        Response response = CLIENT
             .target(DATAFILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(dataFile, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"CreateData");
+        return response.readEntity(DataFile.class);
 
     }
 
@@ -299,19 +347,25 @@ public class SeekRestApiClient implements AutoCloseable {
         
     }
 
-    public Response updateDataFile(String id, DataFile dataFile) {
-        return CLIENT
+    public DataFile updateDataFile(String id, DataFile dataFile) {
+        Response response =  CLIENT
             .target(DATAFILES_REST_URI)
             .path(String.valueOf(id))
             .request(MediaType.APPLICATION_JSON)
             .put(Entity.entity(dataFile, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"UpdateData "+id);
+        return response.readEntity(DataFile.class);
     }
 
-    public Response createModelFile(ModelFile modelFile) {
-        return CLIENT
+    public ModelFile createModelFile(ModelFile modelFile) {
+        Response response = CLIENT
             .target(MODEL_FILES_REST_URI)
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.entity(modelFile, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"CreateModel");
+        return response.readEntity(ModelFile.class);        
     }
 
     public ModelFile getModelFile(int id) {
@@ -331,20 +385,56 @@ public class SeekRestApiClient implements AutoCloseable {
         
     }
 
-    public Response updateModelFile(String id, ModelFile modelFile) {
-        return CLIENT
+    public ModelFile updateModelFile(String id, ModelFile modelFile) {
+        Response response = CLIENT
             .target(MODEL_FILES_REST_URI)
             .path(String.valueOf(id))
             .request(MediaType.APPLICATION_JSON)
             .put(Entity.entity(modelFile, MediaType.APPLICATION_JSON));
+        
+        verifyAPISuccess(response,"UploadModel "+id);
+        return response.readEntity(ModelFile.class);        
+       
     }
 
-    public Response uploadDataFileContent(File dataFileContent, String path) throws Exception {
-        return CLIENT
-            .target(BASE_REST_URI).path(path)
-            .request(MediaType.APPLICATION_JSON)
-            .put(Entity.entity(Files.readAllBytes(dataFileContent.toPath()),
-                    MediaType.APPLICATION_OCTET_STREAM));
+    public void uploadDataFileContent(File dataFileContent, String path) {
+        try {
+            Response response = CLIENT
+                .target(BASE_REST_URI).path(path)
+                .request(MediaType.APPLICATION_JSON)
+                .put(Entity.entity(Files.readAllBytes(dataFileContent.toPath()),
+                        MediaType.APPLICATION_OCTET_STREAM));
+
+            verifyAPISuccess(response,"UploadFileContent "+path);
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not read content: "+e.getMessage(),e);
+        }
         
     }
+    
+    void verifyAPISuccess(Response response, String call) throws IllegalStateException {
+
+        if(response.getStatus() == 200) {        
+            return;
+        }
+        
+        try {
+            String errResStr = response.readEntity(String.class);
+
+            Map<String, List<SeekRestApiError>> errResMap = JSON_MAPPER.readValue(errResStr,
+                new TypeReference<Map<String,List<SeekRestApiError>>>(){});
+
+            List<SeekRestApiError> errors = new ArrayList();        
+            errResMap.values().forEach( l -> errors.addAll(l));
+
+            String messages = errors.stream()
+                        .map( err -> err.getTitle()+": "+err.getDetail())
+                        .collect(Collectors.joining("; "));
+
+            throw new IllegalStateException("API Error for: "+call+":\n"+messages);
+        } catch (IOException e) {
+            throw new IllegalStateException("API Error for: "+call+"; but cannot extract error message", e);
+        }
+    }
+    
 }

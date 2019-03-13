@@ -15,12 +15,15 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
+    "id",
     "type",
     "attributes",
     "relationships"
 })
 public class InvestigationData implements Serializable {
 
+    @JsonProperty("id")
+    private Integer id;
     @JsonProperty("type")
     private String type;
     @JsonProperty("attributes")
@@ -30,6 +33,15 @@ public class InvestigationData implements Serializable {
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    
     @JsonProperty("type")
     public String getType() {
         return type;
