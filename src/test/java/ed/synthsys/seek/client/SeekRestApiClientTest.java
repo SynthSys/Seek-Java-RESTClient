@@ -79,7 +79,7 @@ public class SeekRestApiClientTest {
         Investigation investigation = client.getInvestigation(publicInvestigationId);
         assertNotNull(investigation);
         assertNotNull(investigation.getData().getAttributes().getTitle());
-        assertEquals("Millar, Andrew", investigation.getData().getAttributes().getTitle());
+        assertEquals("Millar, Andrew (ex-PlaSMo models)", investigation.getData().getAttributes().getTitle());
     }
     
     @Test
